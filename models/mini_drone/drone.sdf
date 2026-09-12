@@ -1,0 +1,68 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="mini_drone">
+    <pose>0 0 0.1 0 0 0</pose>
+    <link name="base_link">
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.005</ixx>
+          <iyy>0.005</iyy>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Collision geometry so the drone interacts with the ground physics -->
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.3 0.3 0.1</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Visual geometry representing the drone body in Gazebo -->
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.3 0.3 0.1</size>
+          </box>
+        </geometry>
+      </visual>
+
+      <!-- Top Marker Visual using a flat plane with the ArUco texture -->
+      <visual name="aruco_marker_visual">
+        <pose>0 0 0.055 0 0 0</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.2 0.2</size>
+          </plane>
+        </geometry>
+        <material>
+          <script>
+            <uri>model://mini_drone/materials/scripts</uri>
+            <uri>model://mini_drone/materials/textures</uri>
+            <name>DroneArUcoMarker</name>
+          </script>
+          <lighting>false</lighting>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+    </link>
+
+    <!-- Planar Move Plugin to directly accept /cmd_vel velocity commands -->
+    <!-- Odometry here is GROUND TRUTH for debugging/comparison only -->
+    <!-- The controller uses /vision/estimated_position from the ArUco node instead -->
+    <plugin name="drone_control" filename="libgazebo_ros_planar_move.so">
+      <command_topic>/cmd_vel</command_topic>
+      <odometry_topic>/drone/ground_truth_odom</odometry_topic>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <init_box_x>0</init_box_x>
+      <init_box_y>0</init_box_y>
+    </plugin>
+  </model>
+</sdf>
