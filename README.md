@@ -9,7 +9,7 @@ A modular ROS 2 package engineered for autonomous drone simulation in Gazebo, fe
 - [Package Structure](#package-structure)
 - [Prerequisites & Dependencies](#prerequisites--dependencies)
 - [Installation & Build](#installation--build)
-- [Usage](#usage)
+- [Launch Instructions](#launch-instructions)
 
 ---
 
@@ -34,14 +34,86 @@ This project bridges the gap between simulated physics environments and visual p
 
 ---
 
-## Coordinate System Transformation
+## Coordinate System Transformations
 
 A critical component of this package is mapping between differing software conventions:
-* **OpenCV Optical Frame**: $X$ points right, $Y$ points down, and $Z$ points forward (out of the lens).
-* **Gazebo Engineering Frame**: $X$ points forward, $Y$ points left, and $Z$ points up.
+* **OpenCV Optical Frame**: X points right, Y points down, and Z points forward (out of the lens).
+* **Gazebo Engineering Frame**: X points forward, Y points left, and Z points up.
 
 The tracking node explicitly remaps these axes so controller targets align with native Gazebo ground-plane vectors:
+
 ```python
 pos_msg.x = -float(tvec[1])  # Camera Down (Y) -> Gazebo Forward (X)
 pos_msg.y = -float(tvec[0])  # Camera Right (X) -> Gazebo Left (Y)
 pos_msg.z = float(tvec[2])   # Camera Depth (Z) -> Vertical Altitude (Z)
+```
+
+---
+
+## Package Structure
+drone_control_pkg/
+├── drone_control_pkg/
+│ ├── init.py
+│ ├── aruco_tracker_node.py
+│ ├── controller_node.py
+│ └── turtle_circle.py
+├── launch/
+│ └── sim_control.launch.py
+├── models/
+├── worlds/
+├── tunung/
+│ └── pid_tuned.jpeg
+├── package.xml
+└── setup.py
+
+
+---
+
+## Prerequisites & Dependencies
+
+- ROS 2 (Humble)
+- Gazebo Simulator
+- OpenCV & cv_bridge
+- Python 3 & NumPy
+
+---
+
+## Installation & Build
+
+Navigate to your ROS 2 workspace and build the package:
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select drone_control_pkg --symlink-install
+```
+
+---
+
+## Launch Instructions
+
+Follow these step-by-step instructions in your terminal to initialize and execute the simulation environment:
+
+1. Source your ROS 2 environment (adjust path if using a different distribution):
+
+```bash
+source /opt/ros/humble/setup.bash
+```
+
+2. Source your local workspace overlay:
+
+```bash
+cd ~/ros2_ws
+source install/setup.bash
+```
+
+3. Run the simulation launch file:
+
+```bash
+ros2 launch drone_control_pkg sim_control.launch.py
+```
+
+4. (Optional) If you need to pass simulation time parameters explicitly:
+
+```bash
+ros2 launch drone_control_pkg sim_control.launch.py use_sim_time:=true
+```
