@@ -6,6 +6,15 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
+    # Gazebo scans every package in AMENT_PREFIX_PATH for exported model paths.
+    # Ignore stale sjtu_drone install prefixes: this launch uses only the
+    # planar mini_drone model and the stale packages have no installed manifest.
+    ament_prefixes = os.environ.get('AMENT_PREFIX_PATH', '').split(os.pathsep)
+    os.environ['AMENT_PREFIX_PATH'] = os.pathsep.join(
+        prefix for prefix in ament_prefixes
+        if not os.path.basename(prefix).startswith('sjtu_drone_')
+    )
+
     pkg_share = get_package_share_directory('drone_control_pkg')
     world_file = os.path.join(pkg_share, 'worlds', 'arena.world')
     drone_sdf = os.path.join(pkg_share, 'models', 'mini_drone', 'drone.sdf')
