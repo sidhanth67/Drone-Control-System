@@ -1,7 +1,7 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
+from launch.actions import IncludeLaunchDescription, OpaqueFunction, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
@@ -16,9 +16,39 @@ def generate_launch_description():
     name='GAZEBO_MODEL_PATH',
     value=models_path + ':' + os.environ.get('GAZEBO_MODEL_PATH', '')
 )
+
+    def get_target_coordinates(context, *args, **kwargs):
+        """Read the planar destination before any simulation processes start."""
+        while True:
+            try:
+                raw_coordinates = input(
+                    'Enter destination as "x y" in metres (for example: 2.0 1.0): '
+                ).strip()
+                target_x, target_y = map(float, raw_coordinates.replace(',', ' ').split())
+                break
+            except ValueError:
+                print('Please enter exactly two numeric coordinates, for example: 2.0 1.0.')
+            except EOFError:
+                raise RuntimeError(
+                    'No interactive terminal is available. Launch with a terminal and enter "x y".'
+                )
+
+        print(f'Drone destination set to ({target_x:.2f}, {target_y:.2f}) metres.')
+        return [
+            Node(
+                package='drone_control_pkg',
+                executable='controller_node',
+                name='controller_node',
+                parameters=[{'target_x': target_x, 'target_y': target_y}],
+                output='screen'
+            )
+        ]
     
     return LaunchDescription([
         set_gazebo_model_path,
+
+        # Ask for the destination before Gazebo and the remaining nodes start.
+        OpaqueFunction(function=get_target_coordinates),
         
         # 1. Launch Gazebo with your custom world file
         IncludeLaunchDescription(
@@ -45,14 +75,6 @@ def generate_launch_description():
             package='drone_control_pkg',
             executable='aruco_tracker_node',
             name='aruco_tracker_node',
-            output='screen'
-        ),
-        
-        # 4. Launch your tuned PID Controller Node
-        Node(
-            package='drone_control_pkg',
-            executable='controller_node',
-            name='controller_node',
             output='screen'
         )
     ])

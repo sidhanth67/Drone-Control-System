@@ -48,6 +48,9 @@ class DroneControllerNode(Node):
     def __init__(self):
         super().__init__('controller_node')
 
+        self.declare_parameter('target_x', 2.0)
+        self.declare_parameter('target_y', 1.0)
+
         # Subscribes to the ArUco node's vision-based position estimate,
         # NOT the Gazebo plugin's ground-truth odometry.
         self.subscription = self.create_subscription(
@@ -58,8 +61,8 @@ class DroneControllerNode(Node):
         )
         self.cmd_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
-        self.target_x = 2.0
-        self.target_y = 1.0
+        self.target_x = self.get_parameter('target_x').value
+        self.target_y = self.get_parameter('target_y').value
         self.target_z = 0.0
         self.current_pos = None
         self.last_position_time = None
@@ -76,7 +79,10 @@ class DroneControllerNode(Node):
 
         self.dt = 1.0 / 30.0
         self.timer = self.create_timer(self.dt, self.control_loop)
-        self.get_logger().info("Tuned Drone Controller Node Initialized.")
+        self.get_logger().info(
+            f"Tuned Drone Controller Node Initialized. "
+            f"Target: ({self.target_x:.2f}, {self.target_y:.2f})"
+        )
 
     def position_callback(self, msg):
         self.current_pos = msg
