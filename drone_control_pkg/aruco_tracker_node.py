@@ -46,8 +46,6 @@ class ArucoTrackerNode(Node):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = self.detector.detectMarkers(gray)
 
-        self.get_logger().info(f"Detected ids: {ids}")
-
         if ids is None:
             return
 

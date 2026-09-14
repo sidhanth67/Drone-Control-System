@@ -1,7 +1,14 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, OpaqueFunction, SetEnvironmentVariable
+from launch.actions import (
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+    RegisterEventHandler,
+    SetEnvironmentVariable,
+)
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
@@ -27,7 +34,7 @@ def generate_launch_description():
 )
 
     def get_target_coordinates(context, *args, **kwargs):
-        """Read the planar destination before any simulation processes start."""
+        """Read the destination only after the model has been spawned."""
         while True:
             try:
                 raw_coordinates = input(
@@ -53,11 +60,35 @@ def generate_launch_description():
             )
         ]
     
+    spawn_drone = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        arguments=[
+            '-entity', 'mini_drone',
+            '-file', drone_sdf,
+            # The drone body is 0.1 m high, so z=0.05 rests it directly on
+            # the ground instead of making it fall from the old 0.5 m pose.
+            '-x', '0.0', '-y', '0.0', '-z', '0.05'
+        ],
+        output='screen'
+    )
+
+    def start_after_spawn(event, context):
+        if event.returncode != 0:
+            return [LogInfo(msg='Drone spawn failed; controller will not start.')]
+
+        return [
+            Node(
+                package='drone_control_pkg',
+                executable='aruco_tracker_node',
+                name='aruco_tracker_node',
+                output='screen'
+            ),
+            OpaqueFunction(function=get_target_coordinates),
+        ]
+
     return LaunchDescription([
         set_gazebo_model_path,
-
-        # Ask for the destination before Gazebo and the remaining nodes start.
-        OpaqueFunction(function=get_target_coordinates),
         
         # 1. Launch Gazebo with your custom world file
         IncludeLaunchDescription(
@@ -68,22 +99,15 @@ def generate_launch_description():
         ),
         
         # 2. Spawn the Mini Drone model into Gazebo
-        Node(
-            package='gazebo_ros',
-            executable='spawn_entity.py',
-            arguments=[
-                '-entity', 'mini_drone',
-                '-file', drone_sdf,
-                '-x', '0.0', '-y', '0.0', '-z', '0.5'
-            ],
-            output='screen'
+        spawn_drone,
+
+        # A successful spawn means Gazebo's server and physics are ready.
+        # Start perception and request the destination only then; therefore
+        # the controller cannot publish motion while Gazebo is still starting.
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action=spawn_drone,
+                on_exit=start_after_spawn,
+            )
         ),
-        
-        # 3. Launch the ArUco Tracker / Perception Node
-        Node(
-            package='drone_control_pkg',
-            executable='aruco_tracker_node',
-            name='aruco_tracker_node',
-            output='screen'
-        )
     ])
