@@ -63,7 +63,6 @@ class DroneControllerNode(Node):
 
         self.target_x = self.get_parameter('target_x').value
         self.target_y = self.get_parameter('target_y').value
-        self.target_z = 0.0
         self.current_pos = None
         self.last_position_time = None
 
@@ -75,7 +74,6 @@ class DroneControllerNode(Node):
 
         self.pid_x = PIDController(kp=3.123, ki=0.872, kd=0.0, min_output=-2.0, max_output=2.0)
         self.pid_y = PIDController(kp=3.123, ki=0.872, kd=0.0, min_output=-2.0, max_output=2.0)
-        self.pid_z = PIDController(kp=1.5, ki=0.0, kd=0.2, min_output=-1.5, max_output=1.5)
 
         self.dt = 1.0 / 30.0
         self.timer = self.create_timer(self.dt, self.control_loop)
@@ -91,7 +89,6 @@ class DroneControllerNode(Node):
     def stop_motion(self):
         self.pid_x.reset()
         self.pid_y.reset()
-        self.pid_z.reset()
         self.cmd_publisher.publish(Twist())
 
     def control_axis(self, controller, target, current):
@@ -113,9 +110,6 @@ class DroneControllerNode(Node):
 
         cmd.linear.x = self.control_axis(self.pid_x, self.target_x, self.current_pos.x)
         cmd.linear.y = self.control_axis(self.pid_y, self.target_y, self.current_pos.y)
-        # libgazebo_ros_planar_move only implements XY motion, so publishing a
-        # Z command cannot move this model and is kept at zero deliberately.
-        cmd.linear.z = 0.0
 
         self.cmd_publisher.publish(cmd)
 
