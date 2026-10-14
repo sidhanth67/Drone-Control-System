@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Point, Twist
+from geometry_msgs.msg import Point, PoseStamped, Twist
 
 class PIDController:
     def __init__(self, kp, ki, kd, min_output=-2.0, max_output=2.0):
@@ -50,6 +50,8 @@ class DroneControllerNode(Node):
 
         self.declare_parameter('target_x', 2.0)
         self.declare_parameter('target_y', 1.0)
+        self.declare_parameter('wait_for_goal', False)
+        self.has_goal = not self.get_parameter('wait_for_goal').value
 
         self.subscription = self.create_subscription(
             Point,
@@ -58,9 +60,15 @@ class DroneControllerNode(Node):
             10
         )
         self.cmd_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.goal_subscription = self.create_subscription(
+            PoseStamped,
+            '/goal_pose',
+            self.goal_callback,
+            10
+        )
 
-        self.target_x = self.get_parameter('target_x').value
-        self.target_y = self.get_parameter('target_y').value
+        self.target_x = 0.0
+        self.target_y = 0.0
         self.current_pos = None
         self.last_position_time = None
 
@@ -81,6 +89,14 @@ class DroneControllerNode(Node):
         self.current_pos = msg
         self.last_position_time = self.get_clock().now()
 
+    def goal_callback(self, msg):
+        self.target_x = msg.pose.position.x
+        self.target_y = msg.pose.position.y
+        self.pid_x.reset()
+        self.pid_y.reset()
+
+        self.has_goal = True
+
     def stop_motion(self):
         self.pid_x.reset()
         self.pid_y.reset()
@@ -93,6 +109,8 @@ class DroneControllerNode(Node):
         return controller.compute(target, current, self.dt)
 
     def control_loop(self):
+        if not self.has_goal:
+            return
         if self.current_pos is None:
             return
 

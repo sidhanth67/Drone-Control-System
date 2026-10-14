@@ -26,6 +26,7 @@ data_files=[
     ('share/' + package_name, ['package.xml']),
     # Include launch files
     (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+    (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
     # Include world files
     (os.path.join('share', package_name, 'worlds'), glob('worlds/*.world')),
     # Recursively include all model files, textures, and scripts safely
