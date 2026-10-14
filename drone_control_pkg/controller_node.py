@@ -51,8 +51,6 @@ class DroneControllerNode(Node):
         self.declare_parameter('target_x', 2.0)
         self.declare_parameter('target_y', 1.0)
 
-        # Subscribes to the ArUco node's vision-based position estimate,
-        # NOT the Gazebo plugin's ground-truth odometry.
         self.subscription = self.create_subscription(
             Point,
             '/vision/estimated_position',
@@ -66,10 +64,7 @@ class DroneControllerNode(Node):
         self.current_pos = None
         self.last_position_time = None
 
-        # The ArUco estimate is noisy by a few pixels.  Commanding velocity
-        # inside this radius makes the planar model hunt instead of stop.
         self.position_tolerance = 0.05
-        # A stale position must never keep the previous velocity alive.
         self.position_timeout = 0.25
 
         self.pid_x = PIDController(kp=3.123, ki=0.872, kd=0.0, min_output=-2.0, max_output=2.0)

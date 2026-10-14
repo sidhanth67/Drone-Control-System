@@ -1,4 +1,3 @@
-# This node obtains the camera image, processes it and sends back coordinates to the controller.
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -17,15 +16,11 @@ class ArucoTrackerNode(Node):
             self.image_callback,
             10
         )
-        # Publishes to its own dedicated topic - does NOT collide with the
-        # Gazebo plugin's ground-truth odometry topic anymore.
         self.pos_publisher = self.create_publisher(Point, '/vision/estimated_position', 10)
 
         self.bridge = CvBridge()
         self.dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
         self.parameters = aruco.DetectorParameters()
-        # OpenCV 5 exposes marker detection through ArucoDetector.  Keeping
-        # the detector as node state also avoids rebuilding it for every frame.
         self.detector = aruco.ArucoDetector(self.dictionary, self.parameters)
         self.marker_length = 0.20
 
@@ -68,15 +63,9 @@ class ArucoTrackerNode(Node):
         if not success:
             return
 
-        # solvePnP returns a point in the OpenCV optical camera frame:
-        # x is image-right, y is image-down, and z is away from the camera.
-        # The overhead camera is pitched down toward the Gazebo ground plane,
-        # so its optical XY axes do not match Gazebo world XY.  Publish the
-        # planar position in world coordinates so controller targets can be
-        # written directly as Gazebo (x, y) points.
         pos_msg = Point()
-        pos_msg.x = -float(tvec[1])  # Gazebo world X
-        pos_msg.y = -float(tvec[0])  # Gazebo world Y
+        pos_msg.x = -float(tvec[1])
+        pos_msg.y = -float(tvec[0])
         pos_msg.z = float(tvec[2])
 
         self.pos_publisher.publish(pos_msg)

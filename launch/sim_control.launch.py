@@ -13,9 +13,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    # Gazebo scans every package in AMENT_PREFIX_PATH for exported model paths.
-    # Ignore stale sjtu_drone install prefixes: this launch uses only the
-    # planar mini_drone model and the stale packages have no installed manifest.
+   
     ament_prefixes = os.environ.get('AMENT_PREFIX_PATH', '').split(os.pathsep)
     os.environ['AMENT_PREFIX_PATH'] = os.pathsep.join(
         prefix for prefix in ament_prefixes
@@ -27,7 +25,7 @@ def generate_launch_description():
     drone_sdf = os.path.join(pkg_share, 'models', 'mini_drone', 'drone.sdf')
     models_path = os.path.join(pkg_share, 'models')
     
-    # Crucial: Tells Gazebo where to find the mini_drone model and its textures
+    
     set_gazebo_model_path = SetEnvironmentVariable(
     name='GAZEBO_MODEL_PATH',
     value=models_path + ':' + os.environ.get('GAZEBO_MODEL_PATH', '')
@@ -66,8 +64,6 @@ def generate_launch_description():
         arguments=[
             '-entity', 'mini_drone',
             '-file', drone_sdf,
-            # The drone body is 0.1 m high, so z=0.05 rests it directly on
-            # the ground instead of making it fall from the old 0.5 m pose.
             '-x', '0.0', '-y', '0.0', '-z', '0.05'
         ],
         output='screen'
@@ -90,7 +86,7 @@ def generate_launch_description():
     return LaunchDescription([
         set_gazebo_model_path,
         
-        # 1. Launch Gazebo with your custom world file
+        
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')
@@ -98,12 +94,9 @@ def generate_launch_description():
             launch_arguments={'world': world_file}.items()
         ),
         
-        # 2. Spawn the Mini Drone model into Gazebo
+        
         spawn_drone,
 
-        # A successful spawn means Gazebo's server and physics are ready.
-        # Start perception and request the destination only then; therefore
-        # the controller cannot publish motion while Gazebo is still starting.
         RegisterEventHandler(
             OnProcessExit(
                 target_action=spawn_drone,

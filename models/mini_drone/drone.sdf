@@ -12,7 +12,6 @@
         </inertia>
       </inertial>
 
-      <!-- Collision geometry so the drone interacts with the ground physics -->
       <collision name="collision">
         <geometry>
           <box>
@@ -21,7 +20,6 @@
         </geometry>
       </collision>
 
-      <!-- Visual geometry representing the drone body in Gazebo -->
       <visual name="visual">
         <geometry>
           <box>
@@ -30,7 +28,6 @@
         </geometry>
       </visual>
 
-      <!-- Top Marker Visual using a flat plane with the ArUco texture -->
       <visual name="aruco_marker_visual">
         <pose>0 0 0.055 0 0 0</pose>
         <geometry>
@@ -51,9 +48,6 @@
       </visual>
     </link>
 
-    <!-- Planar Move Plugin to directly accept /cmd_vel velocity commands -->
-    <!-- Odometry here is GROUND TRUTH for debugging/comparison only -->
-    <!-- The controller uses /vision/estimated_position from the ArUco node instead -->
     <plugin name="drone_control" filename="libgazebo_ros_planar_move.so">
       <command_topic>/cmd_vel</command_topic>
       <odometry_topic>/drone/ground_truth_odom</odometry_topic>
