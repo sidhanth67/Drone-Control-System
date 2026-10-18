@@ -1,6 +1,8 @@
+import math
+
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Point, PoseStamped, Twist
+from geometry_msgs.msg import PointStamped, PoseStamped, Twist
 
 class PIDController:
     def __init__(self, kp, ki, kd, min_output=-2.0, max_output=2.0):
@@ -54,7 +56,7 @@ class DroneControllerNode(Node):
         self.has_goal = not self.get_parameter('wait_for_goal').value
 
         self.subscription = self.create_subscription(
-            Point,
+            PointStamped,
             '/vision/estimated_position',
             self.position_callback,
             10
@@ -67,8 +69,10 @@ class DroneControllerNode(Node):
             10
         )
 
-        self.target_x = 0.0
-        self.target_y = 0.0
+        self.target_x = self.get_parameter('target_x').value
+        self.target_y = self.get_parameter('target_y').value
+        self.declare_parameter('world_frame', 'odom')
+        self.world_frame = self.get_parameter('world_frame').value
         self.current_pos = None
         self.last_position_time = None
 
@@ -86,10 +90,19 @@ class DroneControllerNode(Node):
         )
 
     def position_callback(self, msg):
-        self.current_pos = msg
-        self.last_position_time = self.get_clock().now()
+        if msg.header.frame_id != self.world_frame:
+            return
+        if not all(math.isfinite(v) for v in (msg.point.x, msg.point.y, msg.point.z)):
+            return
+        self.current_pos = msg.point
+        self.last_position_time = rclpy.time.Time.from_msg(msg.header.stamp)
 
     def goal_callback(self, msg):
+        if msg.header.frame_id != self.world_frame:
+            self.get_logger().warn('Goal frame must match ' + self.world_frame)
+            return
+        if not all(math.isfinite(v) for v in (msg.pose.position.x, msg.pose.position.y)):
+            return
         self.target_x = msg.pose.position.x
         self.target_y = msg.pose.position.y
         self.pid_x.reset()
@@ -115,7 +128,7 @@ class DroneControllerNode(Node):
             return
 
         position_age = (self.get_clock().now() - self.last_position_time).nanoseconds / 1e9
-        if position_age > self.position_timeout:
+        if position_age < 0 or position_age > self.position_timeout:
             self.stop_motion()
             return
 
@@ -135,6 +148,8 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        if rclpy.ok():
+            node.stop_motion()
         node.destroy_node()
         rclpy.shutdown()
 
