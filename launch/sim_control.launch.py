@@ -65,7 +65,7 @@ def generate_launch_description():
                 package='drone_control_pkg',
                 executable='controller_node',
                 name='controller_node',
-                parameters=[{'wait_for_goal': True, 'use_sim_time': use_sim_time}],
+                parameters=[{'wait_for_goal': False, 'use_sim_time': use_sim_time}],
                 remappings=[('/cmd_vel', '/control/cmd_vel')],
                 output='screen'
             ),

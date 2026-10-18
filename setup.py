@@ -41,7 +41,7 @@ data_files=[
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'command_watchdog_node = drone_control_pkg.command_watchdog_node:main',
+            'command_watchdog_node = drone_control_pkg.command_limiter:main',
             'controller_node = drone_control_pkg.controller_node:main',
             'aruco_tracker_node = drone_control_pkg.aruco_tracker_node:main',
         ],

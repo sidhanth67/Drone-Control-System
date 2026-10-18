@@ -6,7 +6,7 @@ import numpy as np
 from geometry_msgs.msg import PointStamped, PoseStamped, Twist
 
 from drone_control_pkg.aruco_tracker_node import ArucoTrackerNode
-from drone_control_pkg.command_watchdog_node import CommandWatchdogNode
+from drone_control_pkg.command_limiter import CommandWatchdogNode
 from drone_control_pkg.controller_node import DroneControllerNode
 
 
@@ -14,7 +14,7 @@ def test_watchdog_stops_after_command_loss():
     node = SimpleNamespace(
         last_command_time=10.0, timeout=0.25, publisher=Mock()
     )
-    with patch('drone_control_pkg.command_watchdog_node.time.monotonic', return_value=10.3):
+    with patch('drone_control_pkg.command_limiter.time.monotonic', return_value=10.3):
         CommandWatchdogNode.check_timeout(node)
     assert node.publisher.publish.call_args.args[0] == Twist()
 
