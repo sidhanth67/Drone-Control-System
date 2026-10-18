@@ -69,8 +69,22 @@ class DroneControllerNode(Node):
             10
         )
 
-        self.target_x = self.get_parameter('target_x').value
-        self.target_y = self.get_parameter('target_y').value
+        self.declare_parameter('goal_min_x', -2.0)
+        self.declare_parameter('goal_max_x', 2.0)
+        self.declare_parameter('goal_min_y', -2.7)
+        self.declare_parameter('goal_max_y', 2.7)
+        self.goal_bounds = tuple(
+            self.get_parameter(name).value
+            for name in ('goal_min_x', 'goal_max_x', 'goal_min_y', 'goal_max_y')
+        )
+        min_x, max_x, min_y, max_y = self.goal_bounds
+        if (not all(math.isfinite(v) for v in self.goal_bounds) or
+                min_x >= max_x or min_y >= max_y):
+            raise ValueError('Goal bounds must be finite and have min < max')
+        self.target_x, self.target_y = self.constrain_goal(
+            self.get_parameter('target_x').value,
+            self.get_parameter('target_y').value
+        )
         self.declare_parameter('world_frame', 'odom')
         self.world_frame = self.get_parameter('world_frame').value
         self.current_pos = None
@@ -89,6 +103,18 @@ class DroneControllerNode(Node):
             f"Target: ({self.target_x:.2f}, {self.target_y:.2f})"
         )
 
+    def constrain_goal(self, x, y):
+        if not all(math.isfinite(v) for v in (x, y)):
+            raise ValueError('Goal coordinates must be finite')
+        min_x, max_x, min_y, max_y = self.goal_bounds
+        constrained = (max(min_x, min(x, max_x)), max(min_y, min(y, max_y)))
+        if constrained != (x, y):
+            self.get_logger().warn(
+                f'Goal ({x:.2f}, {y:.2f}) constrained to '
+                f'({constrained[0]:.2f}, {constrained[1]:.2f})'
+            )
+        return constrained
+
     def position_callback(self, msg):
         if msg.header.frame_id != self.world_frame:
             return
@@ -103,8 +129,9 @@ class DroneControllerNode(Node):
             return
         if not all(math.isfinite(v) for v in (msg.pose.position.x, msg.pose.position.y)):
             return
-        self.target_x = msg.pose.position.x
-        self.target_y = msg.pose.position.y
+        self.target_x, self.target_y = self.constrain_goal(
+            msg.pose.position.x, msg.pose.position.y
+        )
         self.pid_x.reset()
         self.pid_y.reset()
 
